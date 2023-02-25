@@ -7,6 +7,8 @@ class User:
         self.id = id
         self.role = role
         self.sock = sock
+    def __str__(self):
+        return str(self.id.decode())
 
 class Role(Enum):
     Advisee = 0
@@ -20,7 +22,7 @@ class Message:
         self.sender = sender
         self.content = content
     def __str__(self):
-        return self.sender + ":", self.content
+        return f"{self.sender} -> {self.content}"
 
 class Situation:
     def __init__(self, id: int, advisee: User, message: Message):
@@ -32,7 +34,7 @@ class Situation:
         self.answers: list[Message] = []
         
     def __str__(self):
-        return f"{self.id};{self.message.content}"
+        return f"{self.id} -> {self.message.content}"
         
     def assign_advisor(self, advisor: User):
         self.advisors.append(advisor)
