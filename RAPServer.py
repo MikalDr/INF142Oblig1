@@ -3,6 +3,7 @@ from socket import create_server
 from logic import User, Role, Situation, Message
 import random
 import _thread
+import copy
 
 MESSAGE_SIZE = 1024
 sit_count = 0
@@ -25,10 +26,15 @@ def assign_role() -> Role:
         return random.choice([Role.Advisee, Role.Advisor])
 
 def get_situation(u = None) -> str:
-    return "\n".join([str(sit) for sit in situations.values()]) if u is None else "\n".join([str(sit) for sit in situations.values() if sit.user.id == u.id])
+    return "\n".join([str(sit) for sit in situations.values()]) if u is None else "\n".join([str(sit) for sit in situations.values() if sit.advisee.id == u.id])
 
-def client(socket, u):
+def client(conn):
     global sit_count
+    u = User(assign_name().encode(), assign_role(), conn)
+    print (f"User {u.id.decode()} connected to the server.")
+    users[u.role].append(u)
+    conn.send(f"Hello {(u.id).decode()}, you are an {u.role}".encode())
+    
     while True:
         request_message = conn.recv(1024)
         repl = request_message.decode().split(" ")
@@ -53,9 +59,9 @@ def client(socket, u):
                         situations[sit_id].answers.append(msg)
                         conn.send("Reply sent.".encode())
                 case _:
-                    conn.send(f"Unknown Command {request_message.decode()}".encode())
+                    conn.send(f"Unknown Command {cmd}".encode())
         else:
-            match request_message.decode():
+            match cmd:
                 case "ask":
                     conn.send("Write a prompt:".encode())
                     msg = Message(u,conn.recv(MESSAGE_SIZE).decode())
@@ -67,15 +73,17 @@ def client(socket, u):
                     conn.send(get_situation(u).encode())
                 case "chk":
                     if sit_id in situations.keys() and situations.get(sit_id).advisee.id == u.id:
-                        conn.send("\n".join([str(sit) for sit in situations.get(sit_id) if sit.advisee.id == u.id]))
+                        conn.send("\n".join([str(message) for message in situations.get(sit_id).answers]).encode())
                 case _:
-                    conn.send(f"Unknown Command {request_message.decode()}".encode())     
+                    conn.send(f"Unknown Command {cmd}".encode())     
 
 if __name__ == "__main__":
     sock = create_server(("localhost", 12000))
+    
+    print("Server started!")
+    print("waiting for clients...") 
+
+    sock.listen(5)   
     while True:
-        conn, _ = sock.accept()
-        u = User(assign_name().encode(), assign_role(), conn)
-        users[u.role].append(u)
-        conn.send(f"Hello {(u.id).decode()}, you are an {u.role}".encode())
-        _thread.start_new_thread(client, (conn, u))
+        _thread.start_new_thread(client, (sock.accept()[0],))
+    sock.close()
