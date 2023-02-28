@@ -1,16 +1,33 @@
 from socket import socket
+from logic import MESSAGE_SIZE
+import _thread
+import atexit
 
 
-def request_to_server(sock: socket, message: str) -> str:
-    sock.sendall(message.encode())
-    return sock.recv(1024).decode()
+def server_response(sock: socket) -> None:
+    """
+    Prints server response
+    :param sock:
+    :return:
+    """
+    while True:
+        print(sock.recv(MESSAGE_SIZE).decode())
 
 
-if __name__ == "__main__":
+def main():
     sock = socket()
     sock.connect(("localhost", 12000))
-    print(sock.recv(1024).decode())
+    _thread.start_new_thread(server_response, (sock,))
     while True:
         cmd = input()
-        response = request_to_server(sock, cmd)
-        print(response)
+        sock.sendall(cmd.encode())
+
+
+def disconnect(sock: socket):
+    sock.close()
+
+
+atexit.register(disconnect, socket)
+
+if __name__ == "__main__":
+    main()

@@ -1,6 +1,9 @@
 from __future__ import annotations
 from enum import Enum
-import socket
+from socket import socket
+
+MESSAGE_SIZE = 1024
+"""Message size, in bytes"""
 
 
 class User:
@@ -31,19 +34,11 @@ class Message:
 
 
 class Situation:
-    def __init__(self, id: int, advisee: User, message: Message):
-        self.id = id
+    def __init__(self, advisee: User, message: Message):
         self.advisee = advisee
         self.message = message
-        self.advisors: list[User] = []
-        self.is_answered: bool = False
-        self.answers: list[Message] = []
+        self.advisor: User = None
+        self.answer: Message = None
 
     def __str__(self):
         return f"{self.id} -> {self.message.content}"
-
-    def assign_advisor(self, advisor: User):
-        self.advisors.append(advisor)
-
-    def answer(self, message: Message):
-        pass
