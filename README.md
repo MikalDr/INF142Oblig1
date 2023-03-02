@@ -1,3 +1,3 @@
 # INF142Oblig1
 
-- [ ] Code god
+- [X] Code god
