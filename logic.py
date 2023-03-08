@@ -5,6 +5,9 @@ from socket import socket
 MESSAGE_SIZE = 1024
 """Message size, in bytes"""
 
+SERVER_DISCONNECT_COMMAND = "DISCONNECT_COMMAND"
+"""Disconnect command"""
+
 
 class User:
     def __init__(self, id: bytes, role: Role, sock: socket):

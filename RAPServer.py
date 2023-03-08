@@ -1,12 +1,11 @@
 from __future__ import annotations
 from socket import create_server
 from threading import Semaphore
-from logic import User, Role, Situation, Message, MESSAGE_SIZE
+from logic import User, Role, Situation, Message, MESSAGE_SIZE, SERVER_DISCONNECT_COMMAND
 import random
 import _thread
 
-users: dict[Role, list[User]] = {Role.Advisee: [], Role.Advisor: []}
-"""Dict of users and their roles, key -> Role, value -> list of users in that role"""
+advisees: list[User] = []
 situations: list[Situation] = []
 """List of situations"""
 
@@ -34,7 +33,7 @@ def assign_role() -> Role:
     If there are no advisee's, returns an Advisee, else, randomly chooses
     :return:
     """
-    if len(users.get(Role.Advisee)) == 0:
+    if len(advisees) == 0:
         return Role.Advisee
     else:
         return random.choice([Role.Advisee, Role.Advisor])
@@ -74,7 +73,8 @@ def advisor(u: User) -> None:
 
         sit.answer = ans
 
-        conn.send("Do you want to continue? (y/n, default y)".encode())
+        conn.send("Do you want to continue? (y/n)".encode())
+
         repl = conn.recv(MESSAGE_SIZE).decode()
         if repl in ["n", "no", "No", "nO", "NO"]:
             disconnect_user(u)
@@ -94,16 +94,15 @@ def advisor(u: User) -> None:
 def disconnect_user(user: User) -> None:
     """
     Disconnects users, by removing them from lists of users and closing the socket
-
+    
     :param user:
     :return:
     """
     global user_sem
-    user.sock.close()
-    user_sem.acquire()
-    if user in users.values():
-        users[user.role].remove(user)
-    user_sem.release()
+    user.sock.send("Disconnected from server, hit enter to close client".encode())
+    user.sock.send(SERVER_DISCONNECT_COMMAND.encode())
+    if user in advisees:
+        advisees.remove(user)
     for sit in situations:
         if sit.advisee == user:
             situations.remove(sit)
@@ -130,7 +129,11 @@ def advisee(u: User) -> None:
             if sit.answer is None:
                 continue
             conn.send(f"Advisor: {sit.advisor.id.decode()} answered:\n{sit.answer}\n".encode())
-            conn.send("Do you want to continue? (y/n, default y)".encode())
+            conn.send("Do you want to continue? (y/n)".encode())
+            
+            if u in advisees:
+                advisees.remove(u)
+
             repl = conn.recv(MESSAGE_SIZE).decode()
             if repl in ["n", "no", "No", "nO", "NO"]:
                 disconnect_user(u)
@@ -164,10 +167,11 @@ def parse_answer(msg: bytes) -> tuple[str, int]:
 def assign_role_to_user(user: User) -> User:
     global user_sem
     user_sem.acquire()
-    if user in users.values():
-        users[user.role].remove(user)
+    if user in advisees:
+        advisees.remove(user)
     user.role = assign_role()
-    users[user.role].append(user)
+    if user.role == Role.Advisee:
+        advisees.append(user)
     user_sem.release()
     return user
 
@@ -181,9 +185,9 @@ def main():
     sock.listen(5)
     while True:
         user = assign_role_to_user(User(assign_name().encode(), None, sock.accept()[0]))
-
+        print(len(advisees))
         print(f"User {user.id.decode()} connected to the server.")
-        users[user.role].append(user)
+        
         _thread.start_new_thread(advisee if user.role == Role.Advisee else advisor, (user,))
 
 
