@@ -12,4 +12,15 @@ It should not be a breach of the anonymity criteria.
   up with multiple Advisors, but a single advisee.
 3. When a client is started, the terminal should give insctructions for the use of the application.
 
-The Server and Client works with the condition that there are no unexpected disconnects or errors.
+# Libaries
+* _thread
+  * For concurrently controlling the clients in the server
+* socket
+  * For sending and reveiving messages between client and server
+* random
+  * Assign random roles
+* threading
+  * Semaphores to protect critical sections in the server
+  
+# Known bugs
+* If a client disconnects in the middle of the session a bug appears because the advisor or advisee doest not send a message. This may lead to other clients not receiving messages they should have received.
